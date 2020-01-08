@@ -31,7 +31,7 @@ def adapt_threshold_demo(img): #全局的二值化
     # 自适应的局部阈值二值化
     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     dst = cv.adaptiveThreshold(gray, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C,
-                               cv.THRESH_BINARY, 25, 10)
+                               cv.THRESH_BINARY, 25,10)
     #cv.imwrite('test1.jpg', dst)
     #cv.imshow('binary', dst)
 

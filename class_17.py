@@ -20,12 +20,13 @@ def canny_demo(image):
     edge_canny_one = cv.Canny(blur,50,150)
     # cv.canny:p1:8bit的图像，就uint8型 p2:
     edge_canny = cv.Canny(grad_x,grad_y,50,100)
-    cv.imshow('Canny_dege',edge_canny_one)
+    #cv.imshow('Canny_dege',edge_canny_one)
+    return edge_canny_one
 
 
 img = cv.imread('./image/load_sunny.jpg', 1)  # blue green red
 #video_soble()
-canny_demo(img)
+#canny_demo(img)
 t1 = cv.getTickCount()
 t2 = cv.getTickCount()
 print('time: %s ms' % ((t2 - t1) / cv.getTickFrequency() * 1000))  # 计算运行时间

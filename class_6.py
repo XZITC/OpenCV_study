@@ -23,12 +23,27 @@ def custom_blur_demo(image):
     """
     kernel = np.ones([5, 5], np.float32) / 25  # 最大情况每个点都是255，255*25溢出，所以除保证了不溢出
 
-    kernel_three = np.array([[0,-1,0],
-                             [-1,5,-1],
-                             [0,-1,0]],np.float32)
+    kernel_three = np.array([[0, -1, 0],
+                             [-1, 5, -1],
+                             [0, -1, 0]], np.float32)
     # ddepth :-1 kernel:卷积核 dst：输出位置 anchor：卷积锚点 brodertype：边缘填充模式
     dst = cv.filter2D(image, -1, kernel=kernel_three)
     cv.imshow('custom_blur_demo', dst)
+
+
+def filter2D(image, kernel):
+    """
+     **2D卷积非常重要
+     ddepth :输出图像的深度 ddepth = -1 与原图像深度保持一致
+     kernel:卷积核 单通道浮点矩阵
+     dst：输出位置
+     anchor：卷积锚点
+     delta:滤波后加一个值，暂时不用管
+     brodertype：边缘填充模式 默认：镜像模式就行
+    """
+
+    dst = cv.filter2D(image, -1, )
+
 
 img = cv.imread('./WindowsLogo.jpg', 1)  # blue green red
 blur_demo(img)

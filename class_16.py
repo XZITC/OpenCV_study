@@ -8,7 +8,7 @@ def sobel_demo(image):
     grad_x = cv.Sobel(image,cv.CV_32F,1,0) #在x方向上求梯度
     grad_y = cv.Sobel(image,cv.CV_32F,0,1)#在y方向上求梯度
     grad_force_x = cv.Scharr(image,cv.CV_32F,1,0) #Scharr加强版
-    gradx = cv.convertScaleAbs(grad_x)
+    gradx = cv.convertScaleAbs(grad_x) #需要加绝对值 sobel负的边缘变正号
     grady = cv.convertScaleAbs(grad_y)
     final = cv.addWeighted(gradx,0.5,grady,0.5,0)
     cv.imshow('11',gradx)

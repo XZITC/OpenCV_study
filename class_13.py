@@ -15,10 +15,12 @@ def threshold_demo(img):
 
 def adapt_threshold_demo(img):
     # 自适应的局部阈值二值化
+    # img_blur = cv.medianBlur(img, 3)
     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     # cv.ADAPTIVE_THRESH_GAUSSIAN_C ,cv.ADAPTIVE_THRESH_MEAN_C两者二值计算法
     # p4：区域选择大小，必须奇书
     # p5：好比偏置，激活值
+
     dst = cv.adaptiveThreshold(gray, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C,
                                cv.THRESH_BINARY, 25, 10)
     cv.imwrite('全局.jpg',dst)
@@ -43,7 +45,7 @@ def video_adapt_threshold_demo():
             break
 
 
-img = cv.imread('./image/cam_test.jpg', 1)  # blue green red
+img = cv.imread('./image/load_sunny.jpg', 1)  # blue green red
 #threshold_demo(img)
 #video_adapt_threshold_demo()
 t1 = cv.getTickCount()
