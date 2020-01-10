@@ -1,14 +1,14 @@
 import numpy as np
 import cv2 as cv
 
-def color_space_demo(img):
+def color_space_demo(img):   #转换颜色空间
     gray = cv.cvtColor(img, cv.COLOR_BGR2BGRA)
     cv.imshow('gray', gray)
     hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
     cv.imshow('hsv', hsv)
 
 
-# 提通过hsv提取对应颜色
+# 提通过hsv提取对应颜色 对应的颜色有一张颜色表
 def extra_object_demo():
     capture = cv.VideoCapture(1)
     while (True):
@@ -19,6 +19,7 @@ def extra_object_demo():
         lower_2 = np.array([[156, 43, 46]])
         higher_1 = np.array([10, 255, 255])
         higher_2 = np.array([180, 255, 255])
+        # inRange 1.hsv图 2.低值 3.高值
         rs = cv.inRange(hsv, lower_1, higher_1)
         rs_0 = cv.inRange(hsv, lower_2, higher_2)
         mask = cv.add(rs, rs_0) #生成遮罩

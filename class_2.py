@@ -16,7 +16,7 @@ def access_pixels(img):
     cv.imshow('afEdit,img', img)
 
 
-def create_img():
+def create_img(): # 创建400*400黑色图像
     img = np.zeros([400, 400, 3], np.uint8)  # uint8 range 0-255
     cv.imshow('create_img', img)
 

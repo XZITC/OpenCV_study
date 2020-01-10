@@ -1,6 +1,6 @@
 import cv2 as cv
 import numpy as np
-
+#图像读取以及填充
 
 def inverse(image):
     # dest = cv.bitwise_not(image)
