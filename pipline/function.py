@@ -160,7 +160,7 @@ def selec_roi(x, y, binary_image, deal_image, advanced_mode, debug_flag):  # ROI
 
 def deep_gray(image, c, b):
     """
-    增加对比度和亮度
+    增加对比度和亮
     :param image:
     :param c:
     :param b:

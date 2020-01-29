@@ -3,7 +3,7 @@ import numpy as np
 import pipline.function as fc
 from matplotlib import pyplot as plt
 
-def pipline(src,debug_flag):#frame也代表了可以用图像
+def pipline(src,debug_flag):#frame也代表了可以用图
     edge_img, resize_img, blur_resize_img = fc.auto_canny(src,debug_flag)
     lines = cv.HoughLines(edge_img, 1, np.pi / 180, 120) #霍夫检测
 
