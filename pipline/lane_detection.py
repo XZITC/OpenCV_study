@@ -21,8 +21,6 @@ def key_point_set(lines, image):
     h, w = image.shape[:2]
     h_low = int(h * 0.2)  # 交点范围最低范围 画面1/5处
     h_high = int(h * 0.8)  # 交点最高范围 画面4/5处
-    w_low = int(w * 0.2)
-    w_high = int(h * 0.8)
     if lines is not None:
         # a = lines[0:1]
         for i in range(0, len(lines), 2):  # 每次取两条计算交点和绘制
@@ -136,7 +134,7 @@ def hough_lineP_demo(img):
 def resize_image(image):
     shape_size = (1280, 720)  # 这里像以后统一缩小到720p
     # shape_size = (0, 0)
-    dst = cv.resize(image, shape_size, fx=1, fy=1, interpolation=cv.INTER_CUBIC)
+    dst = cv.resize(image, shape_size, fx=1, fy=1, interpolation=cv.INTER_AREA)
     print(dst.shape)
     # cv.imwrite('resize.jpg', dst)
     return dst
@@ -155,6 +153,7 @@ def shaper(image):
 def auto_canny(image, sigma=0.33):
     small_img = resize_image(image)
     blur = cv.GaussianBlur(small_img, (5, 5), 5)  # 高斯模糊去噪声
+    # blur = cv.edgePreservingFilter(img, sigma_s=100, sigma_r=0.1, flags=cv.RECURS_FILTER)
     # compute the median of the single channel pixel intensities
     v = np.median(blur)
     # 计算中值，自动阈值canny检测
