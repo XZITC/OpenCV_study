@@ -152,11 +152,12 @@ def selec_roi(x, y, binary_image, deal_image, advanced_mode, debug_flag):  # ROI
         cv.line(debug_image, tuple(pts11[0]), tuple(pts11[1]), (0, 191, 255), 1)
         cv.line(debug_image, tuple(pts11[1]), tuple(pts11[2]), (0, 191, 255), 1)
         cv.line(debug_image, tuple(pts11[2]), tuple(pts11[3]), (0, 191, 255), 1)
+        cv.imshow('dst3',dst3)
         cv.imshow('selected_roi_image', binary_final_roi)
-        cv.imshow('warp_binary', gray_fianl_roi)
+        cv.imshow('gray_fianl_roi', gray_fianl_roi)
         cv.imshow('warp', debug_image)
         #cv.imwrite('../roi-image.jpg', deal_fianl_roi)
-    return binary_final_roi,gray_fianl_roi,deal_image_roi
+    return binary_final_roi,gray_fianl_roi,deal_image_roi,Mvt
 
 def deep_gray(image, c, b):
     """
@@ -194,6 +195,7 @@ def find_lane_key_color(warp_roi_gray_image, warp_roi_image, warp_roi_binary_ima
     gradx = cv.convertScaleAbs(grad_x)
     shaperd = shaper(gradx)  # 对x方向的梯度灰度图像进行锐化
     binary_image = threshold(shaperd)  # 对于得到图像二值化，用于后续提取白色信息
+    cv.imshow('binary_image', binary_image)
 
     #通过直方图找车道中点
     histogram = np.sum(binary_image, axis=0)
@@ -216,12 +218,15 @@ def find_lane_key_color(warp_roi_gray_image, warp_roi_image, warp_roi_binary_ima
     return binary_warped
 
 def find_single_lane_color(warp_roi_image, binary_roi_image, postion):  # 输入roi img彩色图 找到白色的rbg
+    cv.imshow('warp_roi_image',warp_roi_image)
     load_colors_b = []
     load_colors_g = []
     load_colors_r = []
     load_colors = np.ones([1, 1, 3])
     h, w = binary_roi_image.shape[:2]
-    for row in range(20, h, 3):
+    h_start = int(h/4)
+    h_end = h_start*3
+    for row in range(h_start, h_end, 3):
         for col in range(postion - 10, postion + 20):
             if (int(binary_roi_image[row][col]) - int(binary_roi_image[row][col - 1])) == 255:
                 # 现在的方法，从给定的peak点从两侧像中点靠近，筛选出白色的点，白色使用rgb来筛选效果比较好
@@ -229,7 +234,7 @@ def find_single_lane_color(warp_roi_image, binary_roi_image, postion):  # 输入
                 load_colors_g.append(warp_roi_image[row][col + 7][1])
                 load_colors_r.append(warp_roi_image[row][col + 7][2])
                 break
-    for row in range(20, h, 3):
+    for row in range(h_start, h_end, 3):
         for col in range(postion + 50, postion - 20, -1):
             if (int(binary_roi_image[row][col]) - int(binary_roi_image[row][col - 1])) == -255:
                 load_colors_b.append(warp_roi_image[row][col - 8][0])
@@ -241,6 +246,7 @@ def find_single_lane_color(warp_roi_image, binary_roi_image, postion):  # 输入
     g = int(np.mean(load_colors_g))
     r = int(np.mean(load_colors_r))
     load_color = [b, g, r]
+    #load_color = [210, 210, 210]
 
     return load_color
 
@@ -248,7 +254,7 @@ def find_single_lane_color(warp_roi_image, binary_roi_image, postion):  # 输入
 def extra_object_demo(roi_img, color, debuge_flag):  # 提取颜色 明天考虑下灰度图提取
     #hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
     #白色
-    lower_1 = np.array(color) - 30  #白色rgb最低范围
+    lower_1 = np.array(color) - 20  #白色rgb最低范围
     higher_1 = np.array(color) + 100  #白色rgb最高范围
     dst_w = cv.inRange(roi_img, lower_1, higher_1)  #提取白色rgb
 
@@ -292,7 +298,7 @@ def find_line(binary_warped,debuge_flag):  # binary_warped是roi区域的二值�
     leftx_current = leftx_base
     rightx_current = rightx_base
     # Set the width of the windows +/- margin
-    margin = 100
+    margin = 50
     # Set minimum number of pixels found to recenter window
     minpix = 50
     # Create empty lists to receive left and right lane pixel indices
@@ -378,13 +384,14 @@ def find_line_by_previous(binary_warped, left_fit, right_fit):
     #这个但返回是画线
 
 
-def draw_area(undist, binary_warped, Minv, left_fit, right_fit):
+def draw_area(image, binary_warped, Minv, left_fit, right_fit,point_y):
     # Generate x and y values for plotting
     ploty = np.linspace(0, binary_warped.shape[0] - 1, binary_warped.shape[0])
     # 3次拟合
     left_fitx = left_fit[0] * ploty ** 3 + left_fit[1] * ploty ** 2 + left_fit[2] * ploty + left_fit[3]
     right_fitx = right_fit[0] * ploty ** 3 + right_fit[1] * ploty ** 2 + right_fit[2] * ploty + right_fit[3]
-    # Create an image to draw the lines on
+    full_ones = np.zeros([image.shape[0],image.shape[1],3],np.uint8)
+    print(full_ones.shape)
     warp_zero = np.zeros_like(binary_warped).astype(np.uint8)
     color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
 
@@ -395,16 +402,22 @@ def draw_area(undist, binary_warped, Minv, left_fit, right_fit):
 
     # Draw the lane onto the warped blank image
     cv.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
+    full_ones[point_y:image.shape[0]] = color_warp
+    cv.imshow('full_ones', full_ones)
+    plt.imshow(image)
+    plt.plot(left_fitx, ploty, color='yellow')
+    plt.plot(right_fitx, ploty, color='blue')
+    # cv.warpPerspective 坐标式（1280，720） （x,y)
+    newwarp = cv.warpPerspective(full_ones, Minv, (image.shape[1], image.shape[0]))
+    cv.imshow('newwarp', newwarp)
+    undist = np.array(image)
+    result = cv.addWeighted(image, 1, newwarp, 0.3, 0)
+    cv.imshow('result', result)
 
-    # Warp the blank back to original image space using inverse perspective matrix (Minv)
-    undist = np.array(undist)
-    newwarp = cv.warpPerspective(color_warp, Minv, (undist.shape[1], undist.shape[0]))
-    #newwarp = expand(newwarp)
-    # Combine the result with the original image
-    result = cv.addWeighted(undist, 1, newwarp, 0.3, 0)
-    cv.imshow('res',result)
-    cv.imshow('warp', newwarp)
-    return result, newwarp
+
+
+
+
 
 def expand(img): #对区域进行填充
     image = img
