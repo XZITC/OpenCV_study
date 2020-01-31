@@ -1,9 +1,10 @@
 import numpy as np
 
+
 # Define a class to receive the characteristics of each line detection
 class Line():
     def __init__(self):
-        # was the line detected in the last iteration?
+        # 上次是否以及检测到
         self.detected = False
         # x values of the last n fits of the line
         self.recent_fitted = [np.array([False])]

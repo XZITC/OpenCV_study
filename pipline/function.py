@@ -3,12 +3,15 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
+
 def resize_image(image):
     shape_size = (1280, 720)  # 这里像以后统一缩小到720p
     # shape_size = (0, 0)
-    dst = cv.resize(image, shape_size, fx=1, fy=1, interpolation=cv.INTER_AREA)
+    dst = cv.resize(image, shape_size, fx=1, fy=1, interpolation=cv.INTER_LANCZOS4)
     print(dst.shape)
-    # cv.imwrite('resizer.jpg', dst)
+    # 之前觉得ps缩小效果很好 查了资料发现 ps的两次立方就是 bicubic （双三次插值） PIL Image中有对应的缩小，
+    # 这边用cv.resize 质量也很好了，默认写入是质量比较低会压缩，开高质量写入效果很好
+    # cv.imwrite('resizer_LANCZOS4_100.jpg', dst,[int(cv.IMWRITE_JPEG_QUALITY), 100])
     return dst
 
 
@@ -16,14 +19,16 @@ def auto_canny(image, debug_flag, sigma=0.33):
     small_img = resize_image(image)
     blur = cv.GaussianBlur(small_img, (5, 5), 5)  # 高斯模糊去噪声
     # blur = cv.edgePreservingFilter(img, sigma_s=100, sigma_r=0.1, flags=cv.RECURS_FILTER)
+
     # compute the median of the single channel pixel intensities
     v = np.median(blur)
     # 计算中值，自动阈值canny检测
     lower = int(max(0, (1.0 - sigma) * v))
     upper = int(min(255, (1.0 + sigma) * v))
     edged = cv.Canny(blur, lower, upper)
-    # 返回边缘图像
-    # edge = cv.Canny(blur, 50, 150)原始版本
+
+    # 直接Canny
+    # edged = cv.Canny(blur, 50, 150) #原始版本
     if debug_flag == 1:
         cv.imshow("canny", edged)
     return edged, small_img, blur
@@ -124,6 +129,10 @@ def selec_roi(x, y, binary_image, deal_image, advanced_mode, debug_flag):  # ROI
                             [x - 30, y + 20],
                             [x + 30, y + 20],
                             [1100, 680]])
+        # pts11 = np.float32([[170, 680],
+        #                     [x - 50, y + 20],
+        #                     [x + 50, y + 20],
+        #                     [1100, 680]])
 
         pts22 = np.float32([[570, 720],
                             [570, 206],
@@ -136,6 +145,10 @@ def selec_roi(x, y, binary_image, deal_image, advanced_mode, debug_flag):  # ROI
                             [590, 350],
                             [730, 350],
                             [1125, 670]])
+        # pts11 = np.float32([[300, 630],  # 原图4点标注
+        #                     [570, 450],
+        #                     [720, 450],
+        #                     [1065, 630]])
 
         pts22 = np.float32([[570, 720],  # 转换目标图4点标注
                             [570, 206],
@@ -207,17 +220,17 @@ def threshold(gray):
     return binary
 
 
-def find_lane_key_color(warp_roi_gray_image, warp_roi_image, warp_roi_binary_image, debug_flag):
+def find_lane_key_color(warp_roi_gray_image, warp_roi_image, warp_roi_binary_image, frame_num,debug_flag):
     # 最终只输出道路颜色功能
 
     grad_x = cv.Sobel(warp_roi_gray_image, cv.CV_32F, 1, 0)  # 在x方向上求梯度
     gradx = cv.convertScaleAbs(grad_x)
     shaperd = shaper(gradx)  # 对x方向的梯度灰度图像进行锐化
     binary_image = threshold(shaperd)  # 对于得到图像二值化，用于后续提取白色信息
-    cv.imshow('binary_image', binary_image)
+
     center_binary_image = np.zeros([warp_roi_binary_image.shape[0], warp_roi_binary_image.shape[1]], np.uint8)  # 截取用
     center_binary_image[:, 440:840] = binary_image[:, 440:840]
-    cv.imshow('center_binary_image', center_binary_image)
+
     # 通过直方图找车道中点
     histogram = np.sum(center_binary_image, axis=0)
     midpoint = np.int(histogram.shape[0] / 2)
@@ -231,6 +244,7 @@ def find_lane_key_color(warp_roi_gray_image, warp_roi_image, warp_roi_binary_ima
         # plt.plot(histogram)
         cv.imshow('Sobel', gradx)
         cv.imshow('threshold', binary_image)
+        cv.imshow('binary_image', binary_image)
         cv.imshow('center_binary_image', center_binary_image)
         # cv.imshow('binary_warped', binary_warped)
 
@@ -238,7 +252,6 @@ def find_lane_key_color(warp_roi_gray_image, warp_roi_image, warp_roi_binary_ima
 
 
 def find_single_lane_color(warp_roi_image, binary_roi_image, postion):  # 输入roi img彩色图 找到白色的rbg
-    cv.imshow('warp_roi_image', warp_roi_image)
     load_colors_b = []
     load_colors_g = []
     load_colors_r = []
@@ -274,7 +287,7 @@ def find_single_lane_color(warp_roi_image, binary_roi_image, postion):  # 输入
 def extra_object_demo(roi_img, color, debug_flag):  # 提取颜色 明天考虑下灰度图提取
     # hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
     # 白色
-    lower_1 = np.array(color) - 10  # 白色rgb最低范围
+    lower_1 = np.array(color) - 30  # 白色rgb最低范围
     higher_1 = np.array(color) + 100  # 白色rgb最高范围
     dst_w = cv.inRange(roi_img, lower_1, higher_1)  # 提取白色rgb
 
@@ -297,7 +310,7 @@ def extra_object_demo(roi_img, color, debug_flag):  # 提取颜色 明天考虑�
     return center_binary_image
 
 
-def find_line(binary_warped, debuge_flag):  # binary_warped是roi区域的二值图 功能：滑窗寻找两侧道路
+def find_line(binary_warped, debug_flag):  # binary_warped是roi区域的二值图 功能：滑窗寻找两侧道路
     # 测试的输出图
     out_img = np.dstack((binary_warped, binary_warped, binary_warped)) * 255
     # Take a histogram of the bottom half of the image
@@ -366,7 +379,7 @@ def find_line(binary_warped, debuge_flag):  # binary_warped是roi区域的二值
     # Fit a second order polynomial to each
     left_fit = np.polyfit(lefty, leftx, 3)
     right_fit = np.polyfit(righty, rightx, 3)
-    if debuge_flag == 1:
+    if debug_flag == 1:
         ploty = np.linspace(0, binary_warped.shape[0] - 1, binary_warped.shape[0])
         left_fitx = left_fit[0] * ploty ** 3 + left_fit[1] * ploty ** 2 + left_fit[2] * ploty + left_fit[3]
         right_fitx = right_fit[0] * ploty ** 3 + right_fit[1] * ploty ** 2 + right_fit[2] * ploty + right_fit[3]
@@ -410,7 +423,7 @@ def find_line_by_previous(binary_warped, left_fit, right_fit):
     # 这个但返回是画线
 
 
-def draw_area(image, binary_warped, Minv, left_fit, right_fit, point_y):
+def draw_area(image, binary_warped,image_roi, Minv, left_fit, right_fit, point_y,debug_flag):
     # Generate x and y values for plotting
     ploty = np.linspace(0, binary_warped.shape[0] - 1, binary_warped.shape[0])
     # 3次拟合
@@ -423,12 +436,12 @@ def draw_area(image, binary_warped, Minv, left_fit, right_fit, point_y):
 
     # Recast the x and y points into usable format for cv2.fillPoly()
     pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
+
     for i in range(0, pts_left.shape[1] - 1):
         cv.circle(color_warp, (int(pts_left[0][i][0]), int(pts_left[0][i][1])), 2, (0, 0, 255))
     pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
     for i in range(0, pts_right.shape[1] - 1):
         cv.circle(color_warp, (int(pts_right[0][i][0]), int(pts_right[0][i][1])), 2, (255, 0, 0))
-    pts = np.hstack((pts_left, pts_right))
 
     for i in range(0, pts_left.shape[1] - 1, 8):
         cv.line(color_warp, (int(pts_left[0][i][0]), int(pts_left[0][i][1])),
@@ -436,21 +449,78 @@ def draw_area(image, binary_warped, Minv, left_fit, right_fit, point_y):
                 (205, 205, 0), 1)
 
     # Draw the lane onto the warped blank image
+    # pts = np.hstack((pts_left, pts_right))
     # cv.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
-    full_ones[point_y:image.shape[0]] = color_warp
-    cv.imshow('full_ones', full_ones)
-    plt.imshow(image)
-    plt.plot(left_fitx, ploty, color='yellow')
-    plt.plot(right_fitx, ploty, color='blue')
+
     # cv.warpPerspective 坐标式（1280，720） （x,y)
-    newwarp = cv.warpPerspective(full_ones, Minv, (image.shape[1], image.shape[0]))
-    cv.imshow('newwarp', newwarp)
-    result = cv.addWeighted(image, 1, newwarp, 0.8, 0)
+    full_ones[point_y:image.shape[0]] = color_warp
+    new_warp = cv.warpPerspective(full_ones, Minv, (image.shape[1], image.shape[0]))
+    # cv.imshow('new_warp', new_warp)
+    result = cv.addWeighted(image, 1, new_warp, 0.8, 0)
     cv.imshow('result', result)
+
+    if debug_flag == 1:
+        cv.imshow('full_ones', full_ones)
+        plt.imshow(image_roi)
+        plt.plot(left_fitx, ploty, color='yellow')
+        plt.plot(right_fitx, ploty, color='blue')
+
+
+def judge_brightness(image, debug_flag):
+
+    gray_img = cv.cvtColor(image,cv.COLOR_BGR2GRAY)
+
+    # 0-49
+    num_1 =  gray_img < 50
+    target_array_1 = gray_img[num_1]
+    num_1_sum = target_array_1.size
+    # 50-99
+    num_2 = gray_img < 100
+    target_array_2 = gray_img[num_2]
+    num_2_sum = target_array_2.size - num_1_sum
+
+    # 100-149
+    num_3 = gray_img < 150
+    target_array_3 = gray_img[num_3]
+    num_3_sum = target_array_3.size - num_2_sum - num_1_sum
+
+    # num150_199
+    num_4 = gray_img < 200
+    target_array_4 = gray_img[num_4]
+    num_4_sum = target_array_4.size - num_3_sum - num_2_sum - num_1_sum
+
+    # num200_255
+    num_5 = gray_img < 256
+    target_array_5 = gray_img[num_5]
+    num_5_sum = target_array_5.size - num_4_sum - num_3_sum - num_2_sum - num_1_sum
+
+    sta_list = np.array([num_1_sum,num_2_sum,num_3_sum,num_4_sum,num_5_sum])
+    mean = np.mean(sta_list)
+    votenp = np.zeros(5)
+    if (sta_list[0] > mean):
+        votenp[0] = -2
+    if (sta_list[1] > mean):
+        votenp[1] = -1
+    if (sta_list[2] > mean):
+        votenp[2] = 0
+    if (sta_list[3] > mean):
+        votenp[3] = 1
+    if (sta_list[4] > mean):
+        votenp[4] = 2
+
+    judge_num = votenp.sum()
+    if debug_flag == 1:
+        # plt.hist(gray_img.ravel(), 256, [0, 256])
+        # plt.show()
+        print(votenp)
+        print(judge_num)
+
+    return judge_num
+
 
 
 def expand(img):  # 对区域进行填充
-    image = img
+    image = img.copy()
     _, green, _ = cv.split(image)
     s = np.sum(green, axis=1)
     a = range(720)
